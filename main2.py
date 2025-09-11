@@ -10,6 +10,24 @@ import json
 import json
 import re
 from docx.shared import Inches
+from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER
+
+# --- tiny helpers (reuse if you already have them) ---
+def insert_paragraph_after(paragraph: Paragraph, text: str = "", style: str | None = None) -> Paragraph:
+    new_p = OxmlElement("w:p")
+    paragraph._p.addnext(new_p)                  # type: ignore[attr-defined]
+    p = Paragraph(new_p, paragraph._parent)
+    if style:
+        p.style = style
+    if text:
+        p.add_run(text)
+    return p
+
+def bulletify(par: Paragraph, text: str):
+    """Manual bullet with hanging indent, looks like a real list."""
+    par.paragraph_format.left_indent = Inches(0.25)
+    par.paragraph_format.first_line_indent = Inches(-0.15)
+    par.add_run("• " + text)
 
 def first_existing_style(doc: Document, candidates: list[str]):
     """Return the first style object that exists in doc.styles from candidates, else None."""
@@ -72,6 +90,87 @@ def replace_placeholder_with_bullets(doc: Document, placeholder: str, items: lis
             return True
 
     return False
+
+# --- main function ---
+def replace_experience_placeholder(doc, placeholder: str, items: list[dict]) -> bool:
+    """
+    items = [
+      {
+        "role": "Undergraduate Research Assistant – Technical Infrastructure and Support",
+        "dates": "May 2024 – Sep 2024",
+        "location": "University of Calgary – Calgary, Alberta",
+        "details": [
+            "Managed device provisioning ...",
+            "Supported researcher access ...",
+            ...
+        ]
+      },
+      ...
+    ]
+    """
+    # find the placeholder paragraph
+    target_p = None
+    for p in doc.paragraphs:
+        if placeholder in p.text:
+            target_p = p
+            break
+    if target_p is None:
+        # also scan inside tables (optional)
+        for tbl in doc.tables:
+            for row in tbl.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        if placeholder in p.text:
+                            target_p = p
+                            break
+                if target_p: break
+            if target_p: break
+    if target_p is None:
+        return False
+
+    # clear placeholder to reuse the same paragraph for the first header
+    for r in list(target_p.runs):
+        r._element.getparent().remove(r._element)
+
+    anchor = target_p
+    first = True
+
+    for entry in items:
+        role   = entry.get("role", "").strip()
+        dates  = entry.get("dates", "").strip()
+        loc    = entry.get("location", "").strip()
+        detail = entry.get("details", []) or []
+
+        # HEADER line (role left, dates right)
+        header_p = anchor if first else insert_paragraph_after(anchor)
+        first = False
+
+        # right-aligned tab stop at page right margin (~6.5")
+        pf = header_p.paragraph_format
+        ts = pf.tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.SPACES)
+
+        # diamond bullet + bold role on left
+        run_role = header_p.add_run("❖ " + role)
+        run_role.bold = True
+
+        # tab to the right-aligned stop + dates
+        header_p.add_run("\t" + dates)
+
+        # LOCATION line
+        loc_p = insert_paragraph_after(header_p, loc)
+        for r in loc_p.runs:
+            r.italic = True
+
+        # DETAILS bullets (indented)
+        prev = loc_p
+        for d in detail:
+            bp = insert_paragraph_after(prev)
+            bulletify(bp, d)
+            prev = bp
+
+        anchor = prev  # so next experience inserts after the last bullet
+
+    return True
 
 def extract_json(text: str) -> str:
     """
@@ -200,11 +299,16 @@ resume_data = {{
         "result4.... and so on as necessary"
     ],
     "experience123": [
-         "result1",
-        "result2",
-        "result3",
-        "result4.... and so on as necessary"
-    ],
+        {{
+        "role": "role1",
+        "dates": "dates1",
+        "location": "location1"
+        "details": [
+            "result1",
+            "result2",
+            "result3",
+            "result4.... and so on as necessary"}}
+        ],
     "projects123": [
          "result1",
         "result2",
@@ -218,13 +322,9 @@ resume_data = {{
 )
 
 api_response = completion.choices[0].message.content
+print("this is the api response:", api_response)
 
 # ---------- helpers ----------
-def insert_paragraph_after(paragraph: Paragraph) -> Paragraph:
-    """Create a new empty paragraph directly after `paragraph`."""
-    new_p = OxmlElement("w:p")
-    paragraph._p.addnext(new_p)                  # type: ignore[attr-defined]
-    return Paragraph(new_p, paragraph._parent)
 
 def set_paragraph_text(p: Paragraph, text: str):
     """Replace all runs in a paragraph with a single run containing `text`."""
@@ -243,3 +343,7 @@ resume_data = json.loads(json_str)
 doc = Document("resume_template.docx")           # your .docx version of the 2nd screenshot
 replace_placeholder_with_bullets(doc, "[skills123]", resume_data["skills123"])
 doc.save("resume_filled_skills.docx")
+
+doc = Document("resume_filled_skills.docx")
+replace_experience_placeholder(doc, "[experience123]", resume_data["experience123"])
+doc.save("resume_filled_experience.docx")
