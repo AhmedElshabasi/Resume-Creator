@@ -172,6 +172,164 @@ def replace_experience_placeholder(doc, placeholder: str, items: list[dict]) -> 
 
     return True
 
+def replace_projects_placeholder(doc: Document, placeholder: str, items: list[dict]) -> bool:
+    """
+    items = [
+      {
+        "title": "Project Name",
+        "dates": "Jan 2024 – Apr 2024",
+        "stack": "Node, React, JS",
+        "details": ["bullet 1", "bullet 2", ...],
+        "link": "https://..."   # optional
+      },
+      ...
+    ]
+    """
+    # find placeholder paragraph (search body and tables)
+    target_p = None
+    for p in doc.paragraphs:
+        if placeholder in p.text:
+            target_p = p
+            break
+    if target_p is None:
+        for tbl in doc.tables:
+            for row in tbl.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        if placeholder in p.text:
+                            target_p = p
+                            break
+                if target_p: break
+            if target_p: break
+    if target_p is None:
+        return False
+
+    # wipe placeholder
+    for r in list(target_p.runs):
+        r._element.getparent().remove(r._element)
+
+    anchor = target_p
+    first = True
+
+    for proj in items:
+        title   = proj.get("title", "").strip()
+        dates   = proj.get("dates", "").strip()
+        stack   = proj.get("stack", "").strip()
+        details = proj.get("details", []) or []
+        link    = proj.get("link", "").strip()
+
+        # HEADER: title left (bold + diamond), dates right (tab stop)
+        header_p = anchor if first else insert_paragraph_after(anchor)
+        first = False
+
+        pf = header_p.paragraph_format
+        pf.tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.SPACES)
+
+        run_title = header_p.add_run("❖ " + title)
+        run_title.bold = True
+        if dates:
+            header_p.add_run("\t" + dates)
+
+        # SUBTITLE: stack (+ optional link) in italics
+        subtitle_parts = []
+        if stack:
+            subtitle_parts.append(stack)
+        if link:
+            subtitle_parts.append(link)
+        if subtitle_parts:
+            sub_p = insert_paragraph_after(header_p, " – ".join(subtitle_parts))
+            for r in sub_p.runs:
+                r.italic = True
+        else:
+            sub_p = header_p  # no subtitle; bullets go directly after header
+
+        # DETAILS bullets
+        prev = sub_p
+        for d in details:
+            bp = insert_paragraph_after(prev)
+            bulletify(bp, d)
+            prev = bp
+
+        anchor = prev  # next project continues after last bullet
+
+    return True
+
+def replace_education_placeholder(doc: Document, placeholder: str, items: list[dict]) -> bool:
+    """
+    items = [
+      {
+        "degree": "Bachelor of Computer Science",
+        "dates": "Sep 2022 – Apr 2026 [Expected]",
+        "location": "University of Calgary – Calgary, Alberta",
+        "details": [
+            "Certifications: ...",
+            "Awards: ...",
+            "Relevant Courses: ..."
+        ]
+      }
+    ]
+    """
+    # find placeholder
+    target_p = None
+    for p in doc.paragraphs:
+        if placeholder in p.text:
+            target_p = p
+            break
+    if target_p is None:
+        for tbl in doc.tables:
+            for row in tbl.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        if placeholder in p.text:
+                            target_p = p
+                            break
+                if target_p: break
+            if target_p: break
+    if target_p is None:
+        return False
+
+    # clear placeholder
+    for r in list(target_p.runs):
+        r._element.getparent().remove(r._element)
+
+    anchor = target_p
+    first = True
+
+    for edu in items:
+        degree  = edu.get("degree", "").strip()
+        dates   = edu.get("dates", "").strip()
+        loc     = edu.get("location", "").strip()
+        details = edu.get("details", []) or []
+
+        # HEADER: degree left (bold), dates right-aligned
+        header_p = anchor if first else insert_paragraph_after(anchor)
+        first = False
+
+        pf = header_p.paragraph_format
+        pf.tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.SPACES)
+
+        run_degree = header_p.add_run(degree)
+        run_degree.bold = True
+        if dates:
+            header_p.add_run("\t" + dates)
+
+        # LOCATION line
+        loc_p = insert_paragraph_after(header_p, loc)
+        for r in loc_p.runs:
+            r.italic = True
+
+        # DETAILS bullets
+        prev = loc_p
+        for d in details:
+            bp = insert_paragraph_after(prev)
+            bulletify(bp, d)
+            prev = bp
+
+        anchor = prev
+
+    return True
+
+
 def extract_json(text: str) -> str:
     """
     Try a few strategies to pull a valid JSON object from a model response.
@@ -293,11 +451,16 @@ resume_data = {{
         "result4.... and so on as necessary"
     ],
      "education123": [
-         "result1",
-        "result2",
-        "result3",
-        "result4.... and so on as necessary"
-    ],
+    {{
+      "degree": "Bachelor of Computer Science",
+      "dates": "Sep 2022 – Apr 2026 [Expected]",
+      "location": "University of Calgary – Calgary, Alberta",
+      "details (extra things like certifications, awards, relevant courses)": [
+      e.g.:
+        "Certifications: CompTIA Sec+ | Pursuing CompTIA Network+ | Google Cybersecurity Professional Certificate",
+        "Awards: PURE (Program for Undergraduate Research Experience) award, University of Calgary International Undergraduate Award",
+        "Relevant Courses: Operating Systems, Networking, Data Structures, Cybersecurity, Software Engineering"}}
+      ],
     "experience123": [
         {{
         "role": "role1",
@@ -309,12 +472,18 @@ resume_data = {{
             "result3",
             "result4.... and so on as necessary"}}
         ],
+    e.g. for projects:
     "projects123": [
-         "result1",
-        "result2",
-        "result3",
-        "result4.... and so on as necessary"
-    ],
+    {{
+      "title": "	EventEcho – Full-stack Role-Based Web Platform ",
+      "dates": "Sep 2024 – Dec 2024",
+      "stack": "Node.js, React, JWT, PostgreSQL, Docker",
+      "details": [
+        "Implemented token-based authentication with role-based access for admins, guests, and users.",
+        "Designed and maintained secure user registration and login APIs aligned with least-privilege access principles.",
+        "Documented access workflows and helped define edge-case handling for login failures and unauthorized actions."
+      ],
+    }},
 }}
 """
         }
@@ -347,3 +516,12 @@ doc.save("resume_filled_skills.docx")
 doc = Document("resume_filled_skills.docx")
 replace_experience_placeholder(doc, "[experience123]", resume_data["experience123"])
 doc.save("resume_filled_experience.docx")
+
+doc = Document("resume_filled_experience.docx")  # or resume_template.docx if you’re doing projects first
+replace_projects_placeholder(doc, "[projects123]", resume_data["projects123"])
+doc.save("resume_filled_projects.docx")
+
+doc = Document("resume_filled_projects.docx")  # or resume_template if fresh
+replace_education_placeholder(doc, "[education123]", resume_data["education123"])
+doc.save("resume_filled_education.docx")
+
