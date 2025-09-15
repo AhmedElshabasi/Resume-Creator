@@ -364,15 +364,25 @@ completion = client.chat.completions.create(
 (587)-435-9647 – Calgary, AB – ahmed.elshabasi@ucalgary.ca – LinkedIn: linkedin.com/in/ahmed-elshabasi/
 Skills
 •	Programming languages: Java, Python, JavaScript, C, C++, HTML, CSS, React, Node.JS, Express.JS, SQL
-•	Software tools: VS Code, Git, Github, Gitlab, Unity, Unreal Engine
+•	Software tools: VS Code, Git, Github, Gitlab, Docker, Unity, Unreal Engine, MS Office
 •	Algorithm and Data Structures: Studied different algorithms and structures in university
 •	Professional Skills: Adaptability, Communication, Detail-oriented, Leadership, and Time Management
 Experience
 Undergraduate Research Assistant (Node, React, JS)					                           May 2024 – Sep 2024
 University of Calgary,     Calgary, AB
-•	Developed an automated workflow using Node and React for extracting in-depth information about the data in the corpus completing tasks within set deadlines.
+•	Developed an automated workflow using Node and React for extracting in-depth information about the data in the corpus and creating data visualizations, completing tasks within set deadlines.
+•	Developed an automated transcription tool using OpenAI’s API Whisper that transcribed hundreds of videos to allow for data analysis.
 •	Collected first-person videos, spoken recordings, and biometric data for a corpus of information needs for outdoor running.
 •	Quickly learned new tools and technologies (Node, React, and smart capture devices) to automate data analysis workflows.
+Summer Intern – Sharpen Up Internship Program (Rotational)					       Jun 2025 – Aug 2025
+Viatris Egypt, Cairo, Egypt
+•	Rotated across departments including Regulatory Affairs, Quality, Medical, and Supply Chain to gain a broad understanding of pharmaceutical operations.
+•	Collaborated with the Data & Analytics team to assist in developing dashboards for supply chain performance monitoring using Excel and basic SQL queries.
+•	Supported the Regulatory Affairs team by preparing documentation for product registration and compliance tracking.
+•	Participated in pharmacovigilance training, learning to evaluate case safety reports and maintain safety databases.
+•	Delivered a final group presentation analyzing business process improvements using data collected during the internship.
+•	Attended workshops on pharmaceutical ethics, global compliance, and the drug approval lifecycle.
+
 Projects
 Self-Checkout Machine Software (Java)								          Sep 2023 – Dec 2023
 •	Collaborated with a team of 20 to designed and develop the software for a self-checkout machine
@@ -384,16 +394,36 @@ Educational Assessment Web App (JS, CSS, HTML)						            Jan 2024 – Apr
 •	Emphasized designing a user-friendly interface to provide smooth navigation and create an engaging test experience.
 Full-stack Financial Assistant| Hackathon Project (Node, React, JS)	   		     	                              Feb 2024
 •	Led a team of 4 to build a full-stack prompt-based financial assistant.
-•	 Used ChatGPT’s API for real-time financial insights and assistance.
+•	Used ChatGPT’s API for real-time financial insights and assistance.
 •	Ensured seamless deployment within the time constraints of the hackathon (24 hours).
+SceneBook: Multi-Theatre Aggregation & Ticketing Platform (PostgreSQL, Node.js, React)	Jan 2025 – Apr 2025
+
+•	Built a full-stack aggregation platform for movie ticketing that unified listings, showtimes, and booking flows across multiple theatre companies (e.g., Cineplex, Landmark).
+•	Integrated dynamic user and admin experiences, including account management, ticket booking, payment (Card/PayPal), and seat reservation.
+•	Designed and implemented a normalized PostgreSQL database schema supporting multi-tenant theatres, admin roles, and a relational audit trail.
+•	Developed SQL-driven APIs for complex operations like rating moderation, payment verification, and movie request handling, using node-postgres.
+•	Created robust admin dashboards for movie listing management, theatre configuration, and comment moderation based on user roles.
+•	Engineered frontend features with React, such as location-based search, company filters, and booking flows with seat previews and payment validation.
+•	Documented architecture using HIPO diagrams, DFDs, and ERDs, and published a complete user guide for navigation and deployment.
+•	GitHub: github.com/AhmedElshabasi/CPSC471W25Project
+EventEcho – Full-Stack Event Management Web Application					Sep 2024 – Dec 2024
+	Team Size: 5 developers | Role: Backend & Systems Integration Developer
+•	Designed and implemented RESTful APIs using Node.js and Express to support event creation, registration, friend management, and admin moderation features.
+•	Integrated PostgreSQL as the primary database, structured normalized schemas, and managed migration/seeding scripts for scalable data persistence.
+•	Implemented token-based authentication with JWT to handle user login, session security, and admin privilege access (including user bans and event removals).
+•	Developed dynamic backend logic to support different user roles (guest, user, admin) and features like private/public events, event invites, and Cloudinary-hosted image uploads.
+•	Collaborated with frontend developers using Git/GitHub and Docker Compose to ensure full-stack alignment and CI-ready deployment in a mobile-first web architecture (React + MUI).
+
 Education
 Bachelor of Computer Science									   2022 – 2026 [Expected]
 University of Calgary,  Calgary, AB									    GPA: 3.68
 •	Awards:
-o	PURE award
+o	PURE (Program for Undergraduate Research Experience) award
 o	President’s Admission Scholarship
 o	University of Calgary International Undergraduate Award
 •	Certificates:
+o	CompTIA Security+
+o	Pursuing CompTIA Network+
 o	Google Cybersecurity Professional Certificate		
 o	Ready for Research Micro credential
 Volunteering
@@ -404,7 +434,6 @@ G.N.P. Hospital,    Jeddah, Saudi Arabia
 •	Recorded students’ progress and managed their attendance for their hospital’s academy training.
 Executive Team Member									          Dec 2021 - Apr 2022
 Model United Nations (MUN) at Dar Jana International School
-•	Managed and participated with the MUN executive team in the organization of documents and preparation of participants
 •	Prepared the hall in which the event takes place and ensured that the event proceeded as expected.
 •	As one of the spokespersons (chairmen) of the event, fulfilled my duties of planning and managing the procedures of the delegates.
 Extracurricular Clubs
