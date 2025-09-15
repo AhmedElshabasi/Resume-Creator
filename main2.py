@@ -9,13 +9,13 @@ from docx.oxml import OxmlElement
 import json
 import json
 import re
-from docx.shared import Inches
+from docx.shared import Inches, Pt
 from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER
 
-# --- tiny helpers (reuse if you already have them) ---
+# --- tiny helpers  ---
 def insert_paragraph_after(paragraph: Paragraph, text: str = "", style: str | None = None) -> Paragraph:
     new_p = OxmlElement("w:p")
-    paragraph._p.addnext(new_p)                  # type: ignore[attr-defined]
+    paragraph._p.addnext(new_p)                 
     p = Paragraph(new_p, paragraph._parent)
     if style:
         p.style = style
@@ -24,10 +24,11 @@ def insert_paragraph_after(paragraph: Paragraph, text: str = "", style: str | No
     return p
 
 def bulletify(par: Paragraph, text: str):
-    """Manual bullet with hanging indent, looks like a real list."""
     par.paragraph_format.left_indent = Inches(0.25)
     par.paragraph_format.first_line_indent = Inches(-0.15)
     par.add_run("• " + text)
+    apply_spacing_and_size(par)     
+
 
 def first_existing_style(doc: Document, candidates: list[str]):
     """Return the first style object that exists in doc.styles from candidates, else None."""
@@ -37,6 +38,23 @@ def first_existing_style(doc: Document, candidates: list[str]):
         except KeyError:
             continue
     return None
+
+def apply_spacing_and_size(p: Paragraph, font_pt: int = 10):
+    pf = p.paragraph_format
+    pf.line_spacing = 1            # single line
+    pf.space_before = Pt(3)        # 3 pt before
+    pf.space_after = Pt(0)         # 0 pt after
+    # Optional (recommended to keep layout tight):
+    # pf.space_after = Pt(0)
+
+    for r in p.runs:
+        r.font.size = Pt(font_pt)
+
+
+
+
+
+
 
 def replace_placeholder_with_bullets(doc: Document, placeholder: str, items: list[str]) -> bool:
     """
@@ -80,6 +98,7 @@ def replace_placeholder_with_bullets(doc: Document, placeholder: str, items: lis
             # First item replaces the placeholder line
             style_as_bullet(p)
             set_paragraph_text(p, (("• " if use_manual_bullets else "") + items[0]))
+            apply_spacing_and_size(p)
 
             # Remaining items
             anchor = p
@@ -87,27 +106,13 @@ def replace_placeholder_with_bullets(doc: Document, placeholder: str, items: lis
                 anchor = insert_paragraph_after(anchor)
                 style_as_bullet(anchor)
                 set_paragraph_text(anchor, (("• " if use_manual_bullets else "") + it))
+                apply_spacing_and_size(anchor)
             return True
 
     return False
 
 # --- main function ---
 def replace_experience_placeholder(doc, placeholder: str, items: list[dict]) -> bool:
-    """
-    items = [
-      {
-        "role": "Undergraduate Research Assistant – Technical Infrastructure and Support",
-        "dates": "May 2024 – Sep 2024",
-        "location": "University of Calgary – Calgary, Alberta",
-        "details": [
-            "Managed device provisioning ...",
-            "Supported researcher access ...",
-            ...
-        ]
-      },
-      ...
-    ]
-    """
     # find the placeholder paragraph
     target_p = None
     for p in doc.paragraphs:
@@ -115,7 +120,6 @@ def replace_experience_placeholder(doc, placeholder: str, items: list[dict]) -> 
             target_p = p
             break
     if target_p is None:
-        # also scan inside tables (optional)
         for tbl in doc.tables:
             for row in tbl.rows:
                 for cell in row.cells:
@@ -145,46 +149,33 @@ def replace_experience_placeholder(doc, placeholder: str, items: list[dict]) -> 
         header_p = anchor if first else insert_paragraph_after(anchor)
         first = False
 
-        # right-aligned tab stop at page right margin (~6.5")
         pf = header_p.paragraph_format
-        ts = pf.tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.SPACES)
+        pf.tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.SPACES)
 
-        # diamond bullet + bold role on left
         run_role = header_p.add_run("❖ " + role)
         run_role.bold = True
-
-        # tab to the right-aligned stop + dates
         header_p.add_run("\t" + dates)
+
+        apply_spacing_and_size(header_p)        # <-- make header 10pt, single, 3pt before
 
         # LOCATION line
         loc_p = insert_paragraph_after(header_p, loc)
         for r in loc_p.runs:
             r.italic = True
+        apply_spacing_and_size(loc_p)           # <-- format location line
 
         # DETAILS bullets (indented)
         prev = loc_p
         for d in detail:
             bp = insert_paragraph_after(prev)
-            bulletify(bp, d)
+            bulletify(bp, d)                    # bulletify already applies spacing/size
             prev = bp
 
-        anchor = prev  # so next experience inserts after the last bullet
+        anchor = prev
 
     return True
 
 def replace_projects_placeholder(doc: Document, placeholder: str, items: list[dict]) -> bool:
-    """
-    items = [
-      {
-        "title": "Project Name",
-        "dates": "Jan 2024 – Apr 2024",
-        "stack": "Node, React, JS",
-        "details": ["bullet 1", "bullet 2", ...],
-        "link": "https://..."   # optional
-      },
-      ...
-    ]
-    """
     # find placeholder paragraph (search body and tables)
     target_p = None
     for p in doc.paragraphs:
@@ -230,6 +221,8 @@ def replace_projects_placeholder(doc: Document, placeholder: str, items: list[di
         if dates:
             header_p.add_run("\t" + dates)
 
+        apply_spacing_and_size(header_p)  # <-- make header 10pt, single, 3pt before
+
         # SUBTITLE: stack (+ optional link) in italics
         subtitle_parts = []
         if stack:
@@ -240,14 +233,15 @@ def replace_projects_placeholder(doc: Document, placeholder: str, items: list[di
             sub_p = insert_paragraph_after(header_p, " – ".join(subtitle_parts))
             for r in sub_p.runs:
                 r.italic = True
+            apply_spacing_and_size(sub_p)   # <-- subtitle formatting
         else:
             sub_p = header_p  # no subtitle; bullets go directly after header
 
-        # DETAILS bullets
+        # DETAILS bullets (bulletify already applies spacing/size)
         prev = sub_p
         for d in details:
             bp = insert_paragraph_after(prev)
-            bulletify(bp, d)
+            bulletify(bp, d)                 # applies 10pt, single, 3pt before
             prev = bp
 
         anchor = prev  # next project continues after last bullet
@@ -255,20 +249,6 @@ def replace_projects_placeholder(doc: Document, placeholder: str, items: list[di
     return True
 
 def replace_education_placeholder(doc: Document, placeholder: str, items: list[dict]) -> bool:
-    """
-    items = [
-      {
-        "degree": "Bachelor of Computer Science",
-        "dates": "Sep 2022 – Apr 2026 [Expected]",
-        "location": "University of Calgary – Calgary, Alberta",
-        "details": [
-            "Certifications: ...",
-            "Awards: ...",
-            "Relevant Courses: ..."
-        ]
-      }
-    ]
-    """
     # find placeholder
     target_p = None
     for p in doc.paragraphs:
@@ -313,16 +293,19 @@ def replace_education_placeholder(doc: Document, placeholder: str, items: list[d
         if dates:
             header_p.add_run("\t" + dates)
 
+        apply_spacing_and_size(header_p)            # ← added
+
         # LOCATION line
         loc_p = insert_paragraph_after(header_p, loc)
         for r in loc_p.runs:
             r.italic = True
+        apply_spacing_and_size(loc_p)               # ← added
 
-        # DETAILS bullets
+        # DETAILS bullets (bulletify already applies spacing/size)
         prev = loc_p
         for d in details:
             bp = insert_paragraph_after(prev)
-            bulletify(bp, d)
+            bulletify(bp, d)                        # bulletify calls apply_spacing_and_size
             prev = bp
 
         anchor = prev
@@ -524,4 +507,9 @@ doc.save("resume_filled_projects.docx")
 doc = Document("resume_filled_projects.docx")  # or resume_template if fresh
 replace_education_placeholder(doc, "[education123]", resume_data["education123"])
 doc.save("resume_filled_education.docx")
+
+import os
+
+# open the file automatically (Windows only)
+os.startfile("resume_filled_education.docx")
 
